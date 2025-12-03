@@ -5,11 +5,15 @@ import android.icu.util.Calendar
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.example.test_lab_week_12.model.Movie
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private val movieAdapter by lazy {
@@ -36,23 +40,22 @@ class MainActivity : AppCompatActivity() {
                 }
             })[MovieViewModel::class.java]
 
-        movieViewModel.popularMovies.observe(this) {popularMovies ->
-            val currentYear =
-                Calendar.getInstance().get(Calendar.YEAR).toString()
 
-            movieAdapter.addMovies(
-                popularMovies
-                    .filter { movie ->
-                        // aman dari null
-                        movie.releaseDate?.startsWith(currentYear) == true
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    movieViewModel.popularMovies.collect { movies ->
+                        movieAdapter.addMovies(movies)
                     }
-                    .sortedByDescending { it.popularity }
-            )
-        }
-
-        movieViewModel.error.observe(this) {error ->
-            if (error.isNotEmpty()){
-                Snackbar.make(recyclerView, error, Snackbar.LENGTH_LONG).show()
+                }
+                launch {
+                    movieViewModel.error.collect { error ->
+                        if (error.isNotEmpty()) Snackbar
+                            .make(
+                                recyclerView, error, Snackbar.LENGTH_LONG
+                            ).show()
+                    }
+                }
             }
         }
     }
