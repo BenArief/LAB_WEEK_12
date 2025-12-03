@@ -28,8 +28,12 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
         viewModelScope.launch(Dispatchers.IO) {
             movieRepository.fetchMovies().catch {
                 _error.value = "An exception occured: ${it.message}"
-            }.collect {
-                _popularMovies.value = it
+            }.collect {movies ->
+                val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR).toString()
+                val filteredMovies = movies
+                    .filter { movie -> movie.releaseDate?.startsWith(currentYear) == true }
+                    .sortedByDescending { it.popularity }
+                _popularMovies.value = filteredMovies
             }
         }
     }
